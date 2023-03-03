@@ -42,6 +42,7 @@ static inline void VisitNumber(
     uint8_t kind,
     struct Encoder *encoder)
 {
+    struct StorageUnion storage;
     const ptrdiff_t offset = encoder->offset;
 
     CHECK_MEMORY(
@@ -53,55 +54,55 @@ static inline void VisitNumber(
         case cl_COLUMN_INT8:
             msgpack_pack_int8(
                 &encoder->packer,
-                DEREF(encoder->addr + offset, int8_t));
+                UNSAFE_READ_MEMORY(encoder->addr + offset, int8_t, storage));
             break ;
         case cl_COLUMN_INT16:
             msgpack_pack_int16(
                 &encoder->packer,
-                DEREF(encoder->addr + offset, int16_t));
+                UNSAFE_READ_MEMORY(encoder->addr + offset, int16_t, storage));
             break ;
         case cl_COLUMN_INT32:
             msgpack_pack_int32(
                 &encoder->packer,
-                DEREF(encoder->addr + offset, int32_t));
+                UNSAFE_READ_MEMORY(encoder->addr + offset, int32_t, storage));
             break ;
         case cl_COLUMN_INT64:
             msgpack_pack_int64(
                 &encoder->packer,
-                DEREF(encoder->addr + offset, int64_t));
+                UNSAFE_READ_MEMORY(encoder->addr + offset, int64_t, storage));
             break ;
         case cl_COLUMN_UINT8:
             msgpack_pack_uint8(
                 &encoder->packer,
-                DEREF(encoder->addr + offset, uint8_t));
+                UNSAFE_READ_MEMORY(encoder->addr + offset, uint8_t, storage));
             break ;
         case cl_COLUMN_UINT16:
             msgpack_pack_uint16(
                 &encoder->packer,
-                DEREF(encoder->addr + offset, uint16_t));
+                UNSAFE_READ_MEMORY(encoder->addr + offset, uint16_t, storage));
             break ;
         case cl_COLUMN_UINT32:
             msgpack_pack_uint32(
                 &encoder->packer,
-                DEREF(encoder->addr + offset, uint32_t));
+                UNSAFE_READ_MEMORY(encoder->addr + offset, uint32_t, storage));
             break ;
         case cl_COLUMN_UINT64:
             msgpack_pack_uint64(
                 &encoder->packer,
-                DEREF(encoder->addr + offset, uint64_t));
+                UNSAFE_READ_MEMORY(encoder->addr + offset, uint64_t, storage));
             break ;
         case cl_COLUMN_FLOAT32:
             msgpack_pack_float(
                 &encoder->packer,
-                DEREF(encoder->addr + offset, float));
+                UNSAFE_READ_MEMORY(encoder->addr + offset, float, storage));
             break ;
         case cl_COLUMN_FLOAT64:
             msgpack_pack_double(
                 &encoder->packer,
-                DEREF(encoder->addr + offset, double));
+                UNSAFE_READ_MEMORY(encoder->addr + offset, double, storage));
             break ;
         case cl_COLUMN_BOOL:
-            DEREF(encoder->addr + offset, bool) ?
+            UNSAFE_READ_MEMORY(encoder->addr + offset, bool, storage) ?
                 msgpack_pack_true(
                     &encoder->packer) :
                 msgpack_pack_false(

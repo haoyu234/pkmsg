@@ -82,9 +82,17 @@ void encode_dyn_array()
     }
 }
 
-int main()
+int main(int argc, char *args[])
 {
-    encode_object();
-    encode_dyn_array();
+    int num = 1;
+    if (argc > 1)
+    {
+        num = atoi(args[1]);
+    }
+    for (int i = 0; i < num; ++ i)
+    {
+        encode_object();
+        encode_dyn_array();
+    }
     return 0;
 }

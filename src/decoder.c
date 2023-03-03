@@ -38,37 +38,37 @@ static inline void VisitNumber(
     switch (kind)
     {
         case cl_COLUMN_INT8:
-            DEREF(decoder->addr + offset, int8_t) = object->via.i64;
+            UNSAFE_WRITE_MEMORY(decoder->addr + offset, int8_t, object->via.i64);
             break ;
         case cl_COLUMN_INT16:
-            DEREF(decoder->addr + offset, int16_t) = object->via.i64;
+            UNSAFE_WRITE_MEMORY(decoder->addr + offset, int16_t, object->via.i64);
             break ;
         case cl_COLUMN_INT32:
-            DEREF(decoder->addr + offset, int32_t) = object->via.i64;
+            UNSAFE_WRITE_MEMORY(decoder->addr + offset, int32_t, object->via.i64);
             break ;
         case cl_COLUMN_INT64:
-            DEREF(decoder->addr + offset, int64_t) = object->via.i64;
+            UNSAFE_WRITE_MEMORY(decoder->addr + offset, int64_t, object->via.i64);
             break ;
         case cl_COLUMN_UINT8:
-            DEREF(decoder->addr + offset, uint8_t) = object->via.u64;
+            UNSAFE_WRITE_MEMORY(decoder->addr + offset, uint8_t, object->via.u64);
             break ;
         case cl_COLUMN_UINT16:
-            DEREF(decoder->addr + offset, uint16_t) = object->via.u64;
+            UNSAFE_WRITE_MEMORY(decoder->addr + offset, uint16_t, object->via.u64);
             break ;
         case cl_COLUMN_UINT32:
-            DEREF(decoder->addr + offset, uint32_t) = object->via.u64;
+            UNSAFE_WRITE_MEMORY(decoder->addr + offset, uint32_t, object->via.u64);
             break ;
         case cl_COLUMN_UINT64:
-            DEREF(decoder->addr + offset, uint64_t) = object->via.u64;
+            UNSAFE_WRITE_MEMORY(decoder->addr + offset, uint64_t, object->via.u64);
             break ;
         case cl_COLUMN_FLOAT32:
-            DEREF(decoder->addr + offset, float) = object->via.f64;
+            UNSAFE_WRITE_MEMORY(decoder->addr + offset, float, object->via.f64);
             break;
         case cl_COLUMN_FLOAT64:
-            DEREF(decoder->addr + offset, double) = object->via.f64;
+            UNSAFE_WRITE_MEMORY(decoder->addr + offset, double, object->via.f64);
             break;
         case cl_COLUMN_BOOL:
-            DEREF(decoder->addr + offset, bool) = object->via.boolean;
+            UNSAFE_WRITE_MEMORY(decoder->addr + offset, bool, object->via.boolean);
             break ;
         default:
             assert(false);
