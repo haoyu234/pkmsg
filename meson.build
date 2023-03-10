@@ -19,7 +19,7 @@ pkmsg_dep = declare_dependency(
         ],
         include_directories: 'include',
         dependencies: [
-            dependency('msgpack'),
+            dependency('msgpack', 'msgpack-c'),
             columns.get_variable('columns_dep'),
         ]
     )
