@@ -2,8 +2,16 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct clColumn;
 
 extern const struct clColumn stUseItemReqObject[];
 extern const struct clColumn stDropObject[];
 extern const struct clColumn stUseItemRspObject[];
+
+#ifdef __cplusplus
+}
+#endif

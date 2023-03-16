@@ -2,8 +2,11 @@
 
 #include <columns.h>
 
-#include "messages_def.h"
 #include "messages.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // line messages.h:3:8
 static const clColumn stUseItemReqColumns[] = {
@@ -31,3 +34,7 @@ static const clColumn stUseItemRspColumns[] = {
 const clColumn stUseItemRspObject[] = {
     DEFINE_OBJECT(struct stUseItemRsp, stUseItemRspColumns),
 };
+
+#ifdef __cplusplus
+}
+#endif
