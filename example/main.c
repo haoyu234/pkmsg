@@ -56,7 +56,7 @@ void encode_dyn_array() {
 }
 
 int main(int argc, char *args[]) {
-  int num = 1;
+  int num = 10000000;
   if (argc > 1) {
     num = atoi(args[1]);
   }

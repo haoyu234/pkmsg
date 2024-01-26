@@ -3,14 +3,14 @@ project(
     'c',
     version: 'v0.0.1',
     default_options: 'c_std=gnu99',
-    subproject_dir: 'external'
 )
 
-columns = subproject('columns')
+cmp = subproject('cmp', required: true)
+columns = subproject('columns', required: true)
 
 pkmsg_dep = declare_dependency(
     include_directories: 'include',
-    link_with: static_library(
+    link_whole: static_library(
         'pkmsg',
         sources: [
             'src/decoder.c',
@@ -19,9 +19,9 @@ pkmsg_dep = declare_dependency(
         ],
         include_directories: 'include',
         dependencies: [
-            dependency('msgpack', 'msgpack-c'),
-            columns.get_variable('columns_dep'),
-        ]
+            cmp.get_variable('cmp_dep'),
+            columns.get_variable('columns_dep')
+        ],
     )
 )
 
@@ -31,8 +31,10 @@ executable(
         'example/main.c',
         'example/messages_def.c',
     ],
+    c_args: ['-pg'],
+    link_args: ['-pg'],
     dependencies: [
         pkmsg_dep,
-        columns.get_variable('columns_dep'),
+        columns.get_variable('columns_dep')
     ]
 )

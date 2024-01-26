@@ -1,80 +1,49 @@
 #pragma once
 
+#include <assert.h>
+#include <cmp.h>
 #include <columns.h>
-#include <inttypes.h>
-#include <stdbool.h>
-#include <string.h>
 
 #define CHECK_COND_ERROR(ctx, cond)                                            \
   do {                                                                         \
     if (!(cond)) {                                                             \
-      ctx->has_error = true;                                                   \
+      (ctx)->has_error = true;                                                 \
+      assert(false);                                                           \
       return;                                                                  \
     }                                                                          \
   } while (false)
 
 #define CHECK_CTX_ERROR(ctx)                                                   \
   do {                                                                         \
-    if (ctx->has_error) {                                                      \
+    if ((ctx)->has_error) {                                                    \
       return;                                                                  \
     }                                                                          \
   } while (false)
 
-#define SIZE(kind) (1ul << (((kind % 6) ? (kind % 6) : 6) - 1))
+extern const int SIZES[];
+#define SIZE(kind) SIZES[kind]
 
-#define CHECK_MEMORY(ctx, kind)                                                \
-  do {                                                                         \
-    if (ctx->offset + SIZE(kind) > ctx->size) {                                \
-      ctx->has_error = true;                                                   \
-      return;                                                                  \
-    }                                                                          \
-  } while (false)
-
-struct storage_union {
+struct storage {
   union {
-    bool b;
-
-    uint8_t u8;
-    uint16_t u16;
-    uint32_t u32;
     uint64_t u64;
-
-    int8_t i8;
-    int16_t i16;
-    int32_t i32;
     int64_t i64;
-
-    float f;
-    double d;
-
-#if __HAVE_FLOAT16
-    _Float16 f16;
-#endif
-#if __HAVE_FLOAT32
-    _Float32 f32;
-#endif
-#if __HAVE_FLOAT64
-    _Float64 f64;
-#endif
-#if __HAVE_FLOAT128
-    _Float128 f128;
-#endif
   };
 };
 
-#define UNSAFE_READ_MEMORY(ptr, type, storage)                                 \
-  memcpy(&storage, ptr, sizeof(type))
+struct context {
+  bool has_error;
 
-#define UNSAFE_WRITE_MEMORY(ptr, type, value)                                  \
-  do {                                                                         \
-    const type storage = value;                                                \
-    memcpy(ptr, &storage, sizeof(type));                                       \
-  } while (false)
+  ptrdiff_t offset;
+  const uint8_t *end_addr;
+
+  cmp_ctx_t ctx;
+};
 
 struct visitor_ops;
 
 typedef void (*visitor_handler)(const struct visitor_ops *visitor,
-                                const clColumn *column, void *context);
+                                const clColumn *column,
+                                struct context *context);
 
 struct visitor_ops {
   visitor_handler visit_number;
@@ -84,6 +53,10 @@ struct visitor_ops {
   visitor_handler visit_flexible_array;
 };
 
-uint32_t read_u32(uint8_t kind, const void *addr);
+void pack_addr(struct context *context, uint8_t kind, const void *addr);
+void unpack_addr(struct context *context, uint8_t kind, void *addr);
+
+void read_addr(uint8_t kind, const void *addr, struct storage *storage);
+
 void visit_children(const struct visitor_ops *visitor, const clColumn *column,
-                    void *context);
+                    struct context *context);

@@ -1,211 +1,174 @@
-#include <columns.h>
-#include <msgpack.h>
+#include <string.h>
 
 #include "internal.h"
 
 struct encoder {
-  bool has_error;
-
-  const uint8_t *addr;
-  size_t size;
-  ptrdiff_t offset;
+  struct context base;
+  const uint8_t *base_addr;
 
   size_t capacity;
   size_t wpos;
   uint8_t *buf;
-
-  msgpack_packer packer;
 };
 
-static inline int write_buf(void *context, const char *buf, size_t len) {
-  struct encoder *encoder = (struct encoder *)context;
+static inline size_t write_buf(cmp_ctx_t *context, const void *data,
+                               size_t count) {
+  struct encoder *encoder = (struct encoder *)context->buf;
 
-  if (encoder->wpos + len > encoder->capacity) {
-    return -1;
+  if (encoder->wpos + count > encoder->capacity) {
+    return 0;
   }
 
-  memcpy(encoder->buf + encoder->wpos, buf, len);
+  memcpy(encoder->buf + encoder->wpos, data, count);
 
-  encoder->wpos += len;
-  return 0;
+  encoder->wpos += count;
+  return count;
 }
 
-static inline void visit_number(const struct visitor_ops *visitor, uint8_t kind,
-                                struct encoder *encoder) {
-  struct storage_union storage;
-  const ptrdiff_t offset = encoder->offset;
-
-  CHECK_MEMORY(encoder, kind);
-
-  switch (kind) {
-  case cl_COLUMN_INT8:
-    UNSAFE_READ_MEMORY(encoder->addr + offset, int8_t, storage);
-    msgpack_pack_int8(&encoder->packer, storage.i8);
-    break;
-  case cl_COLUMN_INT16:
-    UNSAFE_READ_MEMORY(encoder->addr + offset, int16_t, storage);
-    msgpack_pack_int16(&encoder->packer, storage.i16);
-    break;
-  case cl_COLUMN_INT32:
-    UNSAFE_READ_MEMORY(encoder->addr + offset, int32_t, storage);
-    msgpack_pack_int32(&encoder->packer, storage.i32);
-    break;
-  case cl_COLUMN_INT64:
-    UNSAFE_READ_MEMORY(encoder->addr + offset, int64_t, storage);
-    msgpack_pack_int64(&encoder->packer, storage.i64);
-    break;
-  case cl_COLUMN_UINT8:
-    UNSAFE_READ_MEMORY(encoder->addr + offset, uint8_t, storage);
-    msgpack_pack_uint8(&encoder->packer, storage.u8);
-    break;
-  case cl_COLUMN_UINT16:
-    UNSAFE_READ_MEMORY(encoder->addr + offset, uint16_t, storage);
-    msgpack_pack_uint16(&encoder->packer, storage.u16);
-    break;
-  case cl_COLUMN_UINT32:
-    UNSAFE_READ_MEMORY(encoder->addr + offset, uint32_t, storage);
-    msgpack_pack_uint32(&encoder->packer, storage.u32);
-    break;
-  case cl_COLUMN_UINT64:
-    UNSAFE_READ_MEMORY(encoder->addr + offset, uint64_t, storage);
-    msgpack_pack_uint64(&encoder->packer, storage.u64);
-    break;
-  case cl_COLUMN_FLOAT32:
-    UNSAFE_READ_MEMORY(encoder->addr + offset, float, storage);
-    msgpack_pack_float(&encoder->packer, storage.f32);
-    break;
-  case cl_COLUMN_FLOAT64:
-    UNSAFE_READ_MEMORY(encoder->addr + offset, double, storage);
-    msgpack_pack_double(&encoder->packer, storage.f64);
-    break;
-  case cl_COLUMN_BOOL:
-    UNSAFE_READ_MEMORY(encoder->addr + offset, bool, storage);
-    storage.b ? msgpack_pack_true(&encoder->packer)
-              : msgpack_pack_false(&encoder->packer);
-    break;
-  default:
-    assert(false);
-    break;
-  }
+static inline void pack_number(const struct visitor_ops *visitor, uint8_t kind,
+                               struct encoder *encoder) {
+  const ptrdiff_t offset = encoder->base.offset;
+  pack_addr(&encoder->base, kind, encoder->base_addr + offset);
 }
 
 static inline void visit_array(const struct visitor_ops *visitor, uint32_t num,
                                uint8_t kind, const clColumn *element,
                                struct encoder *encoder) {
-  const ptrdiff_t offset = encoder->offset;
+  CHECK_COND_ERROR(&encoder->base, cmp_write_array(&encoder->base.ctx, num));
 
-  CHECK_COND_ERROR(encoder, msgpack_pack_array(&encoder->packer, num) >= 0);
+  if (!num) {
+    return;
+  }
 
-  uint32_t i = 0;
+  const ptrdiff_t offset = encoder->base.offset;
 
   if (element != NULL) {
     const uint32_t stride = element->size;
 
-    for (i = 0; i < num; ++i) {
-      encoder->offset = offset + stride * i;
+    for (int i = 0; i < num; ++i) {
+      encoder->base.offset = offset + stride * i;
 
-      visit_children(visitor, element, encoder);
+      visit_children(visitor, element, &encoder->base);
 
-      CHECK_CTX_ERROR(encoder);
+      CHECK_CTX_ERROR(&encoder->base);
     }
-  } else {
-    for (i = 0; i < num; ++i) {
-      encoder->offset = offset + SIZE(kind) * i;
 
-      visit_number(visitor, kind, encoder);
+    return;
+  }
 
-      CHECK_CTX_ERROR(encoder);
-    }
+  for (int i = 0; i < num; ++i) {
+    encoder->base.offset = offset + SIZE(kind) * i;
+
+    pack_number(visitor, kind, encoder);
+
+    CHECK_CTX_ERROR(&encoder->base);
   }
 }
 
-static void visit_number_handler(const struct visitor_ops *visitor,
-                                 const clColumn *column,
-                                 struct encoder *encoder) {
-  visit_number(visitor, column->kind, encoder);
+static void visit_number(const struct visitor_ops *visitor,
+                         const clColumn *column, struct encoder *encoder) {
+  pack_number(visitor, column->kind, encoder);
 }
 
-static inline void visit_object_handler(const struct visitor_ops *visitor,
-                                        const clColumn *column,
-                                        struct encoder *encoder) {
-  const ptrdiff_t offset = encoder->offset;
+static inline void visit_object(const struct visitor_ops *visitor,
+                                const clColumn *column,
+                                struct encoder *encoder) {
+  const ptrdiff_t offset = encoder->base.offset;
 
   const uint32_t num = column->via_object.num;
   const clColumn *columns = column->via_object.fields;
 
-  CHECK_COND_ERROR(encoder, msgpack_pack_array(&encoder->packer, num) >= 0);
+  CHECK_COND_ERROR(&encoder->base, cmp_write_array(&encoder->base.ctx, num));
 
-  uint32_t i = 0;
+  for (int i = 0; i < num; ++i) {
+    encoder->base.offset = offset + columns[i].offset;
 
-  for (i = 0; i < num; ++i) {
-    encoder->offset = offset + columns[i].offset;
+    visit_children(visitor, columns + i, &encoder->base);
 
-    visit_children(visitor, columns + i, encoder);
-
-    CHECK_CTX_ERROR(encoder);
+    CHECK_CTX_ERROR(&encoder->base);
   }
 }
 
-static inline void visit_union_handler(const struct visitor_ops *visitor,
-                                       const clColumn *column,
-                                       struct encoder *encoder) {
-  const ptrdiff_t offset = encoder->offset;
+static inline void visit_union(const struct visitor_ops *visitor,
+                               const clColumn *column,
+                               struct encoder *encoder) {
+  const ptrdiff_t offset = encoder->base.offset;
 
   const clColumn *prev_column = column - 1;
 
-  const uint32_t pos =
-      read_u32(prev_column->kind,
-               encoder->addr + offset + prev_column->offset - column->offset);
+  const void *addr =
+      encoder->base_addr + offset + prev_column->offset - column->offset;
 
-  CHECK_COND_ERROR(encoder, pos && pos <= column->via_object.num);
+  struct storage storage;
+  read_addr(prev_column->kind, addr, &storage);
 
-  visit_children(visitor, column->via_union.fields + pos - 1, encoder);
+  const uint32_t pos = storage.u64;
+
+  CHECK_COND_ERROR(&encoder->base, pos <= column->via_object.num);
+  CHECK_COND_ERROR(&encoder->base, cmp_write_u32(&encoder->base.ctx, pos));
+
+  if (!pos) {
+    return;
+  }
+
+  visit_children(visitor, column->via_union.fields + pos - 1, &encoder->base);
 }
 
-static inline void visit_fixed_array_handler(const struct visitor_ops *visitor,
-                                             const clColumn *column,
-                                             struct encoder *encoder) {
+static inline void visit_fixed_array(const struct visitor_ops *visitor,
+                                     const clColumn *column,
+                                     struct encoder *encoder) {
   visit_array(visitor, column->via_fixed_array.capacity,
               column->via_fixed_array.flags, column->via_fixed_array.element,
               encoder);
 }
 
-static inline void
-visit_flexible_array_handler(const struct visitor_ops *visitor,
-                             const clColumn *column, struct encoder *encoder) {
-  const ptrdiff_t offset = encoder->offset;
+static inline void visit_flexible_array(const struct visitor_ops *visitor,
+                                        const clColumn *column,
+                                        struct encoder *encoder) {
+  const ptrdiff_t offset = encoder->base.offset;
 
   const clColumn *prev_column = column - 1;
 
-  const uint32_t num =
-      read_u32(prev_column->kind,
-               encoder->addr + offset + prev_column->offset - column->offset);
+  const void *addr =
+      encoder->base_addr + offset + prev_column->offset - column->offset;
+
+  struct storage storage;
+  read_addr(prev_column->kind, addr, &storage);
+
+  const uint32_t num = storage.u64;
+
+  CHECK_COND_ERROR(&encoder->base, num <= column->via_flexible_array.capacity);
 
   visit_array(visitor, num, column->via_flexible_array.flags,
               column->via_flexible_array.element, encoder);
 }
 
 static struct visitor_ops visitor = {
-    .visit_number = (visitor_handler)visit_number_handler,
-    .visit_object = (visitor_handler)visit_object_handler,
-    .visit_union = (visitor_handler)visit_union_handler,
-    .visit_fixed_array = (visitor_handler)visit_fixed_array_handler,
-    .visit_flexible_array = (visitor_handler)visit_flexible_array_handler,
+    .visit_number = (visitor_handler)visit_number,
+    .visit_object = (visitor_handler)visit_object,
+    .visit_union = (visitor_handler)visit_union,
+    .visit_fixed_array = (visitor_handler)visit_fixed_array,
+    .visit_flexible_array = (visitor_handler)visit_flexible_array,
 };
 
 size_t cToBuf(const clColumn *column, const void *addr, size_t size,
               uint8_t *buf, size_t len) {
-  struct encoder encoder = {.has_error = false,
-                            .addr = (const uint8_t *)addr,
-                            .size = size,
-                            .offset = 0,
-                            .capacity = len,
-                            .wpos = 0,
-                            .buf = buf};
+  struct encoder encoder = {
+      .base =
+          {
+              .end_addr = (const uint8_t *)addr + size,
+          },
+      .base_addr = (const uint8_t *)addr,
+      .capacity = len,
+      .buf = buf,
+  };
 
-  msgpack_packer_init(&encoder.packer, &encoder, write_buf);
+  cmp_init(&encoder.base.ctx, &encoder, NULL, NULL, write_buf);
 
-  visit_children(&visitor, column, &encoder);
+  visit_children(&visitor, column, &encoder.base);
+  if (encoder.base.has_error) {
+    return 0;
+  }
 
-  return !encoder.has_error ? encoder.wpos : 0;
+  return encoder.wpos;
 }
