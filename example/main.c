@@ -7,51 +7,55 @@
 #include "messages.h"
 #include "messages_def.h"
 
-void encode_and_decode(const struct clColumn *column, void *object,
-                       size_t size) {
-  uint8_t buf[40960];
+void encode_and_decode(const struct clColumn *column, // 使用工具生成的反射信息
+                       void *object,                  // 结构体地址
+                       size_t size                    // 结构体大小
+) {
 
-  // encode
-  const size_t size1 = cToBuf(column, object, size, buf, sizeof(buf));
+  uint8_t serialized_buf[40960];
 
-  // clear
+  // 编码
+  const size_t wpos =
+      cToBuf(column, object, size, serialized_buf, sizeof(serialized_buf));
+
+  // 重置 c结构体
   memset(object, 0, size);
 
-  // decode
-  const size_t size2 = cFromBuf(column, object, size, buf, size1);
+  // 解码
+  const size_t rpos = cFromBuf(column, object, size, serialized_buf, wpos);
 
-  assert(size1);
-  assert(size2);
-  assert(size1 == size2);
+  assert(wpos);
+  assert(rpos);
+  assert(wpos == rpos);
 }
 
 void encode_object() {
-  struct stUseItemReq useItemReq = {.itemID = 1001};
+  struct stUseItemReq use_item_req = {.itemID = 1001};
 
-  encode_and_decode(stUseItemReqObject, &useItemReq, sizeof(useItemReq));
+  encode_and_decode(stUseItemReqObject, &use_item_req, sizeof(use_item_req));
 
-  assert(useItemReq.itemID == 1001);
+  assert(use_item_req.itemID == 1001);
 }
 
 void encode_dyn_array() {
   const uint32_t num = rand() % 10;
 
-  struct stUseItemRsp useItemRsp;
-  useItemRsp.code = 200;
-  useItemRsp.num = num;
+  struct stUseItemRsp use_item_rsp;
+  use_item_rsp.code = 200;
+  use_item_rsp.num = num;
 
   for (int i = 0; i < num; ++i) {
-    useItemRsp.drops[i].itemID = i + 1;
-    useItemRsp.drops[i].itemNum = i + 1;
+    use_item_rsp.drops[i].itemID = i + 1;
+    use_item_rsp.drops[i].itemNum = i + 1;
   }
 
-  encode_and_decode(stUseItemRspObject, &useItemRsp, sizeof(useItemRsp));
+  encode_and_decode(stUseItemRspObject, &use_item_rsp, sizeof(use_item_rsp));
 
-  assert(num == useItemRsp.num);
+  assert(num == use_item_rsp.num);
 
   for (int i = 0; i < num; ++i) {
-    assert(useItemRsp.drops[i].itemID == i + 1);
-    assert(useItemRsp.drops[i].itemNum == i + 1);
+    assert(use_item_rsp.drops[i].itemID == i + 1);
+    assert(use_item_rsp.drops[i].itemNum == i + 1);
   }
 }
 
