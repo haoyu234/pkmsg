@@ -1,6 +1,5 @@
 #pragma once
 
-#include <assert.h>
 #include <cmp.h>
 #include <columns.h>
 
@@ -8,7 +7,6 @@
   do {                                                                         \
     if (!(cond)) {                                                             \
       (ctx)->has_error = true;                                                 \
-      assert(false);                                                           \
       return;                                                                  \
     }                                                                          \
   } while (false)

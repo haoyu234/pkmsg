@@ -104,7 +104,7 @@ static inline void visit_union(const struct visitor_ops *visitor,
 
   const uint32_t pos = storage.u64;
 
-  CHECK_COND_ERROR(&encoder->base, pos <= column->via_object.num);
+  CHECK_COND_ERROR(&encoder->base, pos <= column->via_union.num);
   CHECK_COND_ERROR(&encoder->base, cmp_write_u32(&encoder->base.ctx, pos));
 
   if (!pos) {

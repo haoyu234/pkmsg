@@ -25,16 +25,34 @@ pkmsg_dep = declare_dependency(
     )
 )
 
-executable(
-    'example',
-    sources: [
-        'example/main.c',
-        'example/messages_def.c',
-    ],
-    c_args: ['-pg'],
-    link_args: ['-pg'],
-    dependencies: [
-        pkmsg_dep,
-        columns.get_variable('columns_dep')
-    ]
-)
+if get_option('BUILD_EXAMPLE')
+    executable(
+        'example',
+        sources: [
+            'example/main.c',
+            'example/messages_def.c',
+        ],
+        c_args: ['-pg'],
+        link_args: ['-pg'],
+        dependencies: [
+            pkmsg_dep,
+            columns.get_variable('columns_dep')
+        ]
+    )
+endif
+
+if get_option('BUILD_TESTS')
+    executable(
+        'fuzz',
+        sources: [
+            'fuzz/fuzz.c',
+            'fuzz/messages_def.c',
+        ],
+        c_args: ['-fsanitize=fuzzer'],
+        link_args: ['-fsanitize=fuzzer'],
+        dependencies: [
+            pkmsg_dep,
+            columns.get_variable('columns_dep')
+        ]
+    )
+endif
