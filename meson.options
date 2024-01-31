@@ -1,2 +1,3 @@
-option('BUILD_TESTS', type: 'boolean', value: false)
-option('BUILD_EXAMPLE', type: 'boolean', value: false)
+option('enable-fuzz', type: 'boolean', value: false)
+option('enable-example', type: 'boolean', value: false)
+option('enable-shared-library', type: 'boolean', value: false)

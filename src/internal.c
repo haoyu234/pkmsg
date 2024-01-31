@@ -1,30 +1,29 @@
 #include <assert.h>
-#include <stdbool.h>
 #include <string.h>
 
 #include "internal.h"
 
-const int SIZES[] = {
-    0,        // cl_COLUMN_NONE
-    1,        // cl_COLUMN_INT8
-    2,        // cl_COLUMN_INT16
-    4,        // cl_COLUMN_INT32
-    8,        // cl_COLUMN_INT64
-    16,       // cl_COLUMN_INT128
-    32,       // cl_COLUMN_INT256
-    1,        // cl_COLUMN_UINT8
-    2,        // cl_COLUMN_UINT16
-    4,        // cl_COLUMN_UINT32
-    8,        // cl_COLUMN_UINT64
-    16,       // cl_COLUMN_UINT128
-    32,       // cl_COLUMN_UINT256
-    1,        // cl_COLUMN_FLOAT8
-    2,        // cl_COLUMN_FLOAT16
-    4,        // cl_COLUMN_FLOAT32
-    8,        // cl_COLUMN_FLOAT64
-    16,       // cl_COLUMN_FLOAT128
-    32,       // cl_COLUMN_FLOAT256
-    [50] = 1, // cl_COLUMN_BOOL
+const int SIZES[cl_COLUMN_MAX] = {
+    0,            // cl_COLUMN_NONE
+    1,            // cl_COLUMN_INT8
+    2,            // cl_COLUMN_INT16
+    4,            // cl_COLUMN_INT32
+    8,            // cl_COLUMN_INT64
+    16,           // cl_COLUMN_INT128
+    32,           // cl_COLUMN_INT256
+    1,            // cl_COLUMN_UINT8
+    2,            // cl_COLUMN_UINT16
+    4,            // cl_COLUMN_UINT32
+    8,            // cl_COLUMN_UINT64
+    16,           // cl_COLUMN_UINT128
+    32,           // cl_COLUMN_UINT256
+    1,            // cl_COLUMN_FLOAT8
+    2,            // cl_COLUMN_FLOAT16
+    4,            // cl_COLUMN_FLOAT32
+    8,            // cl_COLUMN_FLOAT64
+    16,           // cl_COLUMN_FLOAT128
+    32,           // cl_COLUMN_FLOAT256
+    sizeof(bool), // cl_COLUMN_BOOL,
 };
 
 #define max(a, b) ((a) > (b) ? (a) : (b))

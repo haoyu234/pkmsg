@@ -2,6 +2,7 @@
 
 #include <cmp.h>
 #include <columns.h>
+#include <pkmsg.h>
 
 #define CHECK_COND_ERROR(ctx, cond)                                            \
   do {                                                                         \
