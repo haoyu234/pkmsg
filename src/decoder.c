@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "internal.h"
+#include "common.h"
 
 struct decoder {
   struct context base;
@@ -82,7 +82,7 @@ static inline void visit_object(const struct visitor_ops *visitor,
   CHECK_COND_ERROR(&decoder->base, cmp_read_array(&decoder->base.ctx, &size));
   CHECK_COND_ERROR(&decoder->base, size == column->via_object.num);
 
-  const clColumn *columns = column->via_object.fields;
+  const clColumn *columns = column->via_object.columns;
 
   for (int i = 0; i < num; ++i) {
     decoder->base.offset = offset + columns[i].offset;
@@ -118,14 +118,14 @@ static inline void visit_union(const struct visitor_ops *visitor,
     return;
   }
 
-  visit_children(visitor, column->via_union.fields + pos - 1, &decoder->base);
+  visit_children(visitor, column->via_union.columns + pos - 1, &decoder->base);
 }
 
 static inline void visit_fixed_array(const struct visitor_ops *visitor,
                                      const clColumn *column,
                                      struct decoder *decoder) {
   visit_array(visitor, column->via_fixed_array.capacity,
-              column->via_fixed_array.flags, column->via_fixed_array.element,
+              column->via_fixed_array.flags, column->via_fixed_array.columns,
               decoder);
 }
 
@@ -148,7 +148,7 @@ static inline void visit_flexible_array(const struct visitor_ops *visitor,
   CHECK_COND_ERROR(&decoder->base, num <= column->via_flexible_array.capacity);
 
   visit_array(visitor, num, column->via_flexible_array.flags,
-              column->via_flexible_array.element, decoder);
+              column->via_flexible_array.columns, decoder);
 }
 
 static struct visitor_ops visitor = {

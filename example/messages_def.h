@@ -11,6 +11,8 @@ struct clColumn;
 extern const struct clColumn stUseItemReqObject[];
 extern const struct clColumn stDropObject[];
 extern const struct clColumn stUseItemRspObject[];
+extern const struct clColumn stFuzzObject[];
+extern const struct clColumn stTestsObject[];
 #ifdef __cplusplus
 }
 #endif

@@ -15,7 +15,7 @@ columns = subproject('columns', required: true)
 sources = [
     'src/decoder.c',
     'src/encoder.c',
-    'src/internal.c',
+    'src/common.c',
 ]
 
 pkmsg_a = static_library(
@@ -67,8 +67,8 @@ if enable_fuzz
         executable(
             'fuzz',
             sources: [
-                'fuzz/fuzz.c',
-                'fuzz/messages_def.c',
+                'example/fuzz.c',
+                'example/messages_def.c',
             ],
             c_args: ['-fsanitize=fuzzer'],
             link_args: ['-fsanitize=fuzzer'],

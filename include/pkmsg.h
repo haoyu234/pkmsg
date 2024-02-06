@@ -3,11 +3,11 @@
 struct clColumn;
 
 #ifdef __cplusplus
-#include <cinttypes>
 #include <cstddef>
+#include <cstdint>
 #else
-#include <inttypes.h>
 #include <stddef.h>
+#include <stdint.h> // IWYU pragma: keep
 #endif
 
 #if defined(BUILD_PKMSG_DLL)
