@@ -16,13 +16,13 @@ void encode_and_decode(const struct clColumn *column, // 使用工具生成的�
 
   // 编码
   const size_t wpos =
-      cToBuf(column, object, size, serialized_buf, sizeof(serialized_buf));
+      pk_encode(column, object, size, serialized_buf, sizeof(serialized_buf));
 
   // 重置 c结构体
   memset(object, 0, size);
 
   // 解码
-  const size_t rpos = cFromBuf(column, object, size, serialized_buf, wpos);
+  const size_t rpos = pk_decode(column, object, size, serialized_buf, wpos);
 
   assert(wpos);
   assert(rpos);

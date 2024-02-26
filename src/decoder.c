@@ -1,3 +1,4 @@
+#include <bits/stdint-intn.h>
 #include <string.h>
 
 #include "common.h"
@@ -6,12 +7,27 @@ struct decoder {
   struct context base;
   uint8_t *base_addr;
 
-  size_t capacity;
-  size_t rpos;
-  const uint8_t *buf;
+  int32_t rpos;
+  union {
+    struct {
+      void *ctx;
+      int32_t (*read_cb)(void *ctx, void *data, int32_t count);
+    };
+    struct {
+      int32_t capacity;
+      const uint8_t *buf;
+    };
+  };
 };
 
-static inline bool read_buf(cmp_ctx_t *context, void *data, size_t count) {
+static inline bool read_buf1(cmp_ctx_t *context, void *data, size_t count) {
+  struct decoder *decoder = (struct decoder *)context->buf;
+  const int32_t r = decoder->read_cb(decoder->ctx, data, count);
+  decoder->rpos += r;
+  return r == count;
+}
+
+static inline bool read_buf2(cmp_ctx_t *context, void *data, size_t count) {
   struct decoder *decoder = (struct decoder *)context->buf;
 
   if (decoder->rpos + count > decoder->capacity) {
@@ -159,8 +175,60 @@ static struct visitor_ops visitor = {
     .visit_flexible_array = (visitor_handler)visit_flexible_array,
 };
 
-size_t cFromBuf(const clColumn *column, void *addr, size_t size,
-                const uint8_t *buf, size_t len) {
+int32_t pk_decode_cb(const struct clColumn *column, void *addr, int32_t size,
+                     void *ctx,
+                     int32_t (*read_cb)(void *ctx, void *data, int32_t count)) {
+  struct decoder decoder = {
+      .base =
+          {
+              .end_addr = (const uint8_t *)addr + size,
+          },
+      .base_addr = (uint8_t *)addr,
+      .ctx = ctx,
+      .read_cb = read_cb,
+  };
+
+  cmp_init(&decoder.base.ctx, &decoder, read_buf1, NULL, NULL);
+
+  visit_children(&visitor, column, &decoder.base);
+  if (decoder.base.has_error) {
+    return 0;
+  }
+
+  return decoder.rpos;
+}
+
+// struct buf_s {
+//   int32_t rpos;
+//   int32_t capacity;
+//   const uint8_t *buf;
+// };
+
+// static inline int32_t read_buf3(void *context, void *data, int32_t count) {
+//   struct buf_s *buf = (struct buf_s *)context;
+
+//   if (buf->rpos + count > buf->capacity) {
+//     return false;
+//   }
+
+//   memcpy(data, buf->buf + buf->rpos, count);
+
+//   buf->rpos += count;
+//   return count;
+// }
+
+// int32_t pk_decode(const clColumn *column, void *addr, int32_t size,
+//                   const uint8_t *buf, int32_t len) {
+//   struct buf_s ctx = {
+//       .buf = buf,
+//       .capacity = len,
+//   };
+
+//   return pk_decode_cb(column, addr, size, &ctx, read_buf3);
+// }
+
+int32_t pk_decode(const clColumn *column, void *addr, int32_t size,
+                  const uint8_t *buf, int32_t len) {
   struct decoder decoder = {
       .base =
           {
@@ -171,7 +239,7 @@ size_t cFromBuf(const clColumn *column, void *addr, size_t size,
       .buf = buf,
   };
 
-  cmp_init(&decoder.base.ctx, &decoder, read_buf, NULL, NULL);
+  cmp_init(&decoder.base.ctx, &decoder, read_buf2, NULL, NULL);
 
   visit_children(&visitor, column, &decoder.base);
   if (decoder.base.has_error) {

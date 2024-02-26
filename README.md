@@ -11,14 +11,14 @@ int main() {
 
   // 编码
   const size_t wpos =
-      cToBuf(stUseItemReqObject, &use_item_req, sizeof(use_item_req), serialized_buf, sizeof(serialized_buf));
+      pk_encode(stUseItemReqObject, &use_item_req, sizeof(use_item_req), serialized_buf, sizeof(serialized_buf));
 
   // 写入到文件或者网络
   write(socket, serialized_buf, wpos);
 
   // 解码
   const size_t rpos =
-      cFromBuf(stUseItemReqObject, &use_item_req, sizeof(use_item_req), serialized_buf, wpos);
+      pk_decode(stUseItemReqObject, &use_item_req, sizeof(use_item_req), serialized_buf, wpos);
 
   ...
 }
@@ -27,10 +27,10 @@ int main() {
 ## api
 ```c
 // 编码
-size_t cToBuf(const struct clColumn *column, const void *addr, size_t size,
+size_t pk_encode(const struct clColumn *column, const void *addr, size_t size,
               uint8_t *buf, size_t len);
 
 // 解码
-size_t cFromBuf(const struct clColumn *column, void *addr, size_t size,
+size_t pk_decode(const struct clColumn *column, void *addr, size_t size,
                 const uint8_t *buf, size_t len);
    ```

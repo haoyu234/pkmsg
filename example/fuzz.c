@@ -15,11 +15,11 @@ void test_1(const uint8_t *data, size_t size) {
   struct stTests object;
 
   const size_t rpos =
-      cFromBuf(stTestsObject, &object, sizeof(object), data, size);
+      pk_decode(stTestsObject, &object, sizeof(object), data, size);
   if (rpos > 0) {
     uint8_t serialized_buf[10240];
-    const size_t wpos = cToBuf(stTestsObject, &object, sizeof(object),
-                               serialized_buf, sizeof(serialized_buf));
+    const size_t wpos = pk_encode(stTestsObject, &object, sizeof(object),
+                                  serialized_buf, sizeof(serialized_buf));
 
     assert(rpos == wpos);
   }
@@ -39,14 +39,14 @@ int test_2(const uint8_t *data, size_t size) {
   }
 
   uint8_t serialized_buf[10240];
-  const size_t wpos = cToBuf(stTestsObject, &object, sizeof(object),
-                             serialized_buf, sizeof(serialized_buf));
+  const size_t wpos = pk_encode(stTestsObject, &object, sizeof(object),
+                                serialized_buf, sizeof(serialized_buf));
   assert(wpos);
 
   memset(&object, 0, sizeof(object));
 
   const size_t rpos =
-      cFromBuf(stTestsObject, &object, sizeof(object), serialized_buf, wpos);
+      pk_decode(stTestsObject, &object, sizeof(object), serialized_buf, wpos);
 
   assert(rpos);
   assert(rpos == wpos);

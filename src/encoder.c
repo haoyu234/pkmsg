@@ -6,13 +6,29 @@ struct encoder {
   struct context base;
   const uint8_t *base_addr;
 
-  size_t capacity;
-  size_t wpos;
-  uint8_t *buf;
+  int32_t wpos;
+  union {
+    struct {
+      int32_t capacity;
+      uint8_t *buf;
+    };
+    struct {
+      void *ctx;
+      int32_t (*write_cb)(void *ctx, const void *data, int32_t count);
+    };
+  };
 };
 
-static inline size_t write_buf(cmp_ctx_t *context, const void *data,
-                               size_t count) {
+static inline size_t write_buf1(cmp_ctx_t *context, const void *data,
+                                size_t count) {
+  struct encoder *encoder = (struct encoder *)context->buf;
+  const int32_t r = encoder->write_cb(encoder->ctx, data, count);
+  encoder->wpos += r;
+  return r;
+}
+
+static inline size_t write_buf2(cmp_ctx_t *context, const void *data,
+                                size_t count) {
   struct encoder *encoder = (struct encoder *)context->buf;
 
   if (encoder->wpos + count > encoder->capacity) {
@@ -151,8 +167,62 @@ static struct visitor_ops visitor = {
     .visit_flexible_array = (visitor_handler)visit_flexible_array,
 };
 
-size_t cToBuf(const clColumn *column, const void *addr, size_t size,
-              uint8_t *buf, size_t len) {
+int32_t pk_encode_cb(const struct clColumn *column, const void *addr,
+                     int32_t size, void *ctx,
+                     int32_t (*write_cb)(void *ctx, const void *data,
+                                         int32_t count)) {
+  struct encoder encoder = {
+      .base =
+          {
+              .end_addr = (const uint8_t *)addr + size,
+          },
+      .base_addr = (const uint8_t *)addr,
+      .ctx = ctx,
+      .write_cb = write_cb,
+  };
+
+  cmp_init(&encoder.base.ctx, &encoder, NULL, NULL, write_buf1);
+
+  visit_children(&visitor, column, &encoder.base);
+  if (encoder.base.has_error) {
+    return 0;
+  }
+
+  return encoder.wpos;
+}
+
+// struct buf_s {
+//   int32_t wpos;
+//   int32_t capacity;
+//   uint8_t *buf;
+// };
+
+// static inline int32_t write_buf3(void *context, const void *data,
+//                                  int32_t count) {
+//   struct buf_s *buf = (struct buf_s *)context;
+
+//   if (buf->wpos + count > buf->capacity) {
+//     return false;
+//   }
+
+//   memcpy(buf->buf + buf->wpos, data, count);
+
+//   buf->wpos += count;
+//   return count;
+// }
+
+// int32_t pk_encode(const clColumn *column, const void *addr, int32_t size,
+//                   uint8_t *buf, int32_t len) {
+//   struct buf_s ctx = {
+//       .buf = buf,
+//       .capacity = len,
+//   };
+
+//   return pk_encode_cb(column, addr, size, &ctx, write_buf3);
+// }
+
+int32_t pk_encode(const clColumn *column, const void *addr, int32_t size,
+                  uint8_t *buf, int32_t len) {
   struct encoder encoder = {
       .base =
           {
@@ -163,7 +233,7 @@ size_t cToBuf(const clColumn *column, const void *addr, size_t size,
       .buf = buf,
   };
 
-  cmp_init(&encoder.base.ctx, &encoder, NULL, NULL, write_buf);
+  cmp_init(&encoder.base.ctx, &encoder, NULL, NULL, write_buf2);
 
   visit_children(&visitor, column, &encoder.base);
   if (encoder.base.has_error) {

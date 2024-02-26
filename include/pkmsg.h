@@ -30,11 +30,20 @@ struct clColumn;
 extern "C" {
 #endif
 
-PKMSG_EXPORT size_t cToBuf(const struct clColumn *column, const void *addr,
-                           size_t size, uint8_t *buf, size_t len);
+PKMSG_EXPORT int32_t pk_encode(const struct clColumn *column, const void *addr,
+                               int32_t size, uint8_t *buf, int32_t len);
 
-PKMSG_EXPORT size_t cFromBuf(const struct clColumn *column, void *addr,
-                             size_t size, const uint8_t *buf, size_t len);
+PKMSG_EXPORT int32_t pk_decode(const struct clColumn *column, void *addr,
+                               int32_t size, const uint8_t *buf, int32_t len);
+
+PKMSG_EXPORT int32_t pk_encode_cb(
+    const struct clColumn *column, const void *addr, int32_t size, void *ctx,
+    int32_t (*write_cb)(void *ctx, const void *data, int32_t count));
+
+PKMSG_EXPORT int32_t pk_decode_cb(const struct clColumn *column, void *addr,
+                                  int32_t size, void *ctx,
+                                  int32_t (*read_cb)(void *ctx, void *data,
+                                                     int32_t count));
 
 #ifdef __cplusplus
 }
