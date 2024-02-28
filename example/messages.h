@@ -1,6 +1,7 @@
 #include <stdint.h> // IWYU pragma: keep
 
 struct stUseItemReq {
+  char name[32];
   uint32_t itemID;
 };
 

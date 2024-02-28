@@ -164,6 +164,43 @@ void unpack_addr(struct context *context, uint8_t kind, void *addr) {
   }
 }
 
+void pack_array(struct context *context, uint8_t kind, const void *addr,
+                int32_t len) {
+  if (kind == cl_INT8 || kind == cl_UINT8) {
+    CHECK_COND_ERROR(context, cmp_write_bin(&context->ctx, addr, len));
+    return;
+  }
+
+  ptrdiff_t offset = 0;
+
+  for (int i = 0; i < len; ++i) {
+    offset = offset + SIZE(kind) * i;
+
+    pack_addr(context, kind, addr + offset);
+
+    CHECK_CTX_ERROR(context);
+  }
+}
+
+void unpack_array(struct context *context, uint8_t kind, void *addr,
+                  int32_t len) {
+  if (kind == cl_INT8 || kind == cl_UINT8) {
+    uint32_t size = len;
+    CHECK_COND_ERROR(context, cmp_read_bin(&context->ctx, addr, &size));
+    return;
+  }
+
+  ptrdiff_t offset = 0;
+
+  for (int i = 0; i < len; ++i) {
+    offset = offset + SIZE(kind) * i;
+
+    unpack_addr(context, kind, addr + offset);
+
+    CHECK_CTX_ERROR(context);
+  }
+}
+
 void read_addr(uint8_t kind, const void *addr, struct storage *storage) {
   struct full_storage full_storage;
   switch (kind) {

@@ -50,15 +50,15 @@ static inline void pack_number(const struct visitor_ops *visitor, uint8_t kind,
 static inline void visit_array(const struct visitor_ops *visitor, uint32_t num,
                                uint8_t kind, const clColumn *element,
                                struct encoder *encoder) {
-  CHECK_COND_ERROR(&encoder->base, cmp_write_array(&encoder->base.ctx, num));
-
-  if (!num) {
-    return;
-  }
-
   const ptrdiff_t offset = encoder->base.offset;
 
   if (element != NULL) {
+    CHECK_COND_ERROR(&encoder->base, cmp_write_array(&encoder->base.ctx, num));
+
+    if (!num) {
+      return;
+    }
+
     const uint32_t stride = element->size;
 
     for (int i = 0; i < num; ++i) {
@@ -72,13 +72,7 @@ static inline void visit_array(const struct visitor_ops *visitor, uint32_t num,
     return;
   }
 
-  for (int i = 0; i < num; ++i) {
-    encoder->base.offset = offset + SIZE(kind) * i;
-
-    pack_number(visitor, kind, encoder);
-
-    CHECK_CTX_ERROR(&encoder->base);
-  }
+  pack_array(&encoder->base, kind, encoder->base_addr + offset, num);
 }
 
 static void visit_number(const struct visitor_ops *visitor,

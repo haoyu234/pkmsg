@@ -55,6 +55,11 @@ struct visitor_ops {
 void pack_addr(struct context *context, uint8_t kind, const void *addr);
 void unpack_addr(struct context *context, uint8_t kind, void *addr);
 
+void pack_array(struct context *context, uint8_t kind, const void *addr,
+                int32_t len);
+void unpack_array(struct context *context, uint8_t kind, void *addr,
+                  int32_t len);
+
 void read_addr(uint8_t kind, const void *addr, struct storage *storage);
 
 void visit_children(const struct visitor_ops *visitor, const clColumn *column,

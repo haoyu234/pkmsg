@@ -11,7 +11,6 @@ void encode_and_decode(const struct clColumn *column, // 使用工具生成的�
                        void *object,                  // 结构体地址
                        size_t size                    // 结构体大小
 ) {
-
   uint8_t serialized_buf[40960];
 
   // 编码

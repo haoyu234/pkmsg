@@ -49,18 +49,18 @@ static inline void unpack_number(const struct visitor_ops *visitor,
 static inline void visit_array(const struct visitor_ops *visitor, uint32_t num,
                                uint8_t kind, const clColumn *element,
                                struct decoder *decoder) {
-  uint32_t real_num = 0;
-  CHECK_COND_ERROR(&decoder->base,
-                   cmp_read_array(&decoder->base.ctx, &real_num));
-  CHECK_COND_ERROR(&decoder->base, num == real_num);
-
-  if (!num) {
-    return;
-  }
-
   const ptrdiff_t offset = decoder->base.offset;
 
   if (element != NULL) {
+    uint32_t real_num = 0;
+    CHECK_COND_ERROR(&decoder->base,
+                     cmp_read_array(&decoder->base.ctx, &real_num));
+    CHECK_COND_ERROR(&decoder->base, num == real_num);
+
+    if (!num) {
+      return;
+    }
+
     const uint32_t stride = element->size;
 
     for (int i = 0; i < num; ++i) {
@@ -74,13 +74,7 @@ static inline void visit_array(const struct visitor_ops *visitor, uint32_t num,
     return;
   }
 
-  for (int i = 0; i < num; ++i) {
-    decoder->base.offset = offset + SIZE(kind) * i;
-
-    unpack_number(visitor, kind, decoder);
-
-    CHECK_CTX_ERROR(&decoder->base);
-  }
+  unpack_array(&decoder->base, kind, decoder->base_addr + offset, num);
 }
 
 static void visit_number(const struct visitor_ops *visitor,
