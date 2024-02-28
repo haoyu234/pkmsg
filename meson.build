@@ -7,45 +7,34 @@ project(
 
 enable_fuzz = get_option('enable-fuzz')
 enable_example = get_option('enable-example')
-enable_shared_library = get_option('enable-shared-library')
 
 cmp = subproject('cmp', required: true)
 columns = subproject('columns', required: true)
 
-sources = [
-    'src/decoder.c',
-    'src/encoder.c',
-    'src/common.c',
-]
-
-pkmsg_a = static_library(
+pkmsg_lib = library(
     'pkmsg',
-    sources: sources,
+    sources: [
+        'src/decoder.c',
+        'src/encoder.c',
+        'src/common.c',
+    ],
     include_directories: 'include',
     gnu_symbol_visibility: 'hidden',
+    c_shared_args: ['-DBUILD_PKMSG_DLL'],
     dependencies: [
         cmp.get_variable('cmp_dep'),
-        columns.get_variable('columns_dep')
+        columns.get_variable('columns_dep'),
     ],
 )
 
-if enable_shared_library
-    shared_library(
-        'pkmsg',
-        sources: sources,
-        include_directories: 'include',
-        c_args: ['-DBUILD_PKMSG_DLL'],
-        gnu_symbol_visibility: 'hidden',
-        dependencies: [
-            cmp.get_variable('cmp_dep'),
-            columns.get_variable('columns_dep')
-        ],
-    )
-endif
-
 pkmsg_dep = declare_dependency(
     include_directories: 'include',
-    link_with: pkmsg_a
+    link_with: [
+        pkmsg_lib,
+    ],
+    dependencies: [
+        columns.get_variable('columns_dep'),
+    ],
 )
 
 if enable_example
@@ -57,7 +46,7 @@ if enable_example
         ],
         dependencies: [
             pkmsg_dep,
-            columns.get_variable('columns_dep')
+            columns.get_variable('columns_dep'),
         ]
     )
 endif
@@ -74,7 +63,7 @@ if enable_fuzz
             link_args: ['-fsanitize=fuzzer'],
             dependencies: [
                 pkmsg_dep,
-                columns.get_variable('columns_dep')
+                columns.get_variable('columns_dep'),
             ]
         )
     endif

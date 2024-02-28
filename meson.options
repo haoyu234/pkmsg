@@ -1,3 +1,2 @@
 option('enable-fuzz', type: 'boolean', value: false)
 option('enable-example', type: 'boolean', value: false)
-option('enable-shared-library', type: 'boolean', value: false)
