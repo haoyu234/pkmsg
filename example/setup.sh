@@ -1,1 +1,3 @@
-python3 ../subprojects/columns/columns.py --std=c11 ./messages.h
+#!/bin/sh
+
+sh ../subprojects/columns/columns.sh --std=c11 ./messages.h
