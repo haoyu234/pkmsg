@@ -8,8 +8,8 @@
 
 #define MY_MIN(a, b) (a) > (b) ? (b) : (a)
 #define MY_MAX(a, b) (a) < (b) ? (b) : (a)
-#define MY_ADJUST_SIZE(SZ, FIELD)                                              \
-  SZ = MY_MIN(SZ, sizeof(FIELD) / sizeof(FIELD[0]))
+#define MY_ARRAY_SIZE(ARRAY) sizeof(ARRAY) / sizeof(ARRAY[0])
+#define MY_ADJUST_SIZE(SZ, FIELD) SZ = MY_MIN(SZ, MY_ARRAY_SIZE(FIELD))
 
 void test_1(const uint8_t *data, size_t size) {
   struct stTests object;
@@ -30,12 +30,14 @@ int test_2(const uint8_t *data, size_t size) {
 
   memcpy(&object, data, MY_MIN(sizeof(object), size));
 
-  MY_ADJUST_SIZE(object.len, object.name);
+  object.name[MY_ARRAY_SIZE(object.name) - 1] = 0;
+
   MY_ADJUST_SIZE(object.fuzzNum, object.fuzz);
 
   for (int i = 0; i < object.fuzzNum; ++i) {
     object.fuzz[i].tag = MY_MAX(object.fuzz[i].tag, 1);
     object.fuzz[i].tag = MY_MIN(object.fuzz[i].tag, 4);
+    object.fuzz[i].name[MY_ARRAY_SIZE(object.fuzz[i].name) - 1] = 0;
   }
 
   uint8_t serialized_buf[10240];
@@ -43,10 +45,11 @@ int test_2(const uint8_t *data, size_t size) {
                                 serialized_buf, sizeof(serialized_buf));
   assert(wpos);
 
-  memset(&object, 0, sizeof(object));
+  struct stTests object2;
+  memset(&object2, 0, sizeof(object2));
 
   const size_t rpos =
-      pk_decode(stTestsObject, &object, sizeof(object), serialized_buf, wpos);
+      pk_decode(stTestsObject, &object2, sizeof(object2), serialized_buf, wpos);
 
   assert(rpos);
   assert(rpos == wpos);

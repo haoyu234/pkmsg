@@ -4,9 +4,17 @@
 #include <columns.h>
 #include <pkmsg.h>
 
+#ifdef _DEBUG
+#include <assert.h>
+#define ASSERT_FALSE() assert(false)
+#else
+#define ASSERT_FALSE()
+#endif
+
 #define CHECK_COND_ERROR(ctx, cond)                                            \
   do {                                                                         \
     if (!(cond)) {                                                             \
+      ASSERT_FALSE();                                                          \
       (ctx)->has_error = true;                                                 \
       return;                                                                  \
     }                                                                          \
@@ -18,9 +26,6 @@
       return;                                                                  \
     }                                                                          \
   } while (false)
-
-extern const int SIZES[];
-#define SIZE(kind) SIZES[kind]
 
 struct storage {
   union {
@@ -50,17 +55,22 @@ struct visitor_ops {
   visitor_handler visit_union;
   visitor_handler visit_fixed_array;
   visitor_handler visit_flexible_array;
+  visitor_handler visit_string;
 };
 
-void pack_addr(struct context *context, uint8_t kind, const void *addr);
-void unpack_addr(struct context *context, uint8_t kind, void *addr);
+void pack_addr(struct context *context, uint8_t tp, const void *addr);
+void unpack_addr(struct context *context, uint8_t tp, void *addr);
 
-void pack_array(struct context *context, uint8_t kind, const void *addr,
+void pack_array(struct context *context, uint8_t tp, const void *addr,
                 int32_t len);
-void unpack_array(struct context *context, uint8_t kind, void *addr,
-                  int32_t len);
+void unpack_array(struct context *context, uint8_t tp, void *addr, int32_t len);
 
-void read_addr(uint8_t kind, const void *addr, struct storage *storage);
+void pack_string(struct context *context, uint8_t tp, const void *addr,
+                 int32_t cap);
+void unpack_string(struct context *context, uint8_t tp, void *addr,
+                   int32_t cap);
+
+void read_addr(uint8_t tp, const void *addr, struct storage *storage);
 
 void visit_children(const struct visitor_ops *visitor, const clColumn *column,
                     struct context *context);

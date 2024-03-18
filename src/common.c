@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-const int SIZES[cl_MAX] = {
+const int32_t SIZES[cl_MAX] = {
     0,            // cl_NONE
     1,            // cl_INT8
     2,            // cl_INT16
@@ -70,19 +70,19 @@ struct full_storage {
   };
 };
 
-#define CHECK_MEMORY_BOUNDARY(ctx, kind, addr)                                 \
+#define CHECK_MEMORY_BOUNDARY(ctx, tp, addr)                                   \
   do {                                                                         \
-    if ((uint8_t *)(addr) + SIZE((kind)) > (ctx)->end_addr) {                  \
+    if ((uint8_t *)(addr) + SIZES[(tp)] > (ctx)->end_addr) {                   \
       (ctx)->has_error = true;                                                 \
       return;                                                                  \
     }                                                                          \
   } while (false)
 
-void pack_addr(struct context *context, uint8_t kind, const void *addr) {
-  CHECK_MEMORY_BOUNDARY(context, kind, addr);
+void pack_addr(struct context *context, uint8_t tp, const void *addr) {
+  CHECK_MEMORY_BOUNDARY(context, tp, addr);
 
   struct full_storage storage;
-  switch (kind) {
+  switch (tp) {
   case cl_BOOL:
     CHECK_COND_ERROR(context, cmp_write_bool(&context->ctx, *(bool *)addr));
     break;
@@ -121,11 +121,11 @@ void pack_addr(struct context *context, uint8_t kind, const void *addr) {
   }
 }
 
-void unpack_addr(struct context *context, uint8_t kind, void *addr) {
-  CHECK_MEMORY_BOUNDARY(context, kind, addr);
+void unpack_addr(struct context *context, uint8_t tp, void *addr) {
+  CHECK_MEMORY_BOUNDARY(context, tp, addr);
 
   struct full_storage storage;
-  switch (kind) {
+  switch (tp) {
   case cl_BOOL:
     CHECK_COND_ERROR(context, cmp_read_bool(&context->ctx, (bool *)addr));
     break;
@@ -164,46 +164,92 @@ void unpack_addr(struct context *context, uint8_t kind, void *addr) {
   }
 }
 
-void pack_array(struct context *context, uint8_t kind, const void *addr,
+void pack_array(struct context *context, uint8_t tp, const void *addr,
                 int32_t len) {
-  if (kind == cl_INT8 || kind == cl_UINT8) {
+  if (tp == cl_INT8 || tp == cl_UINT8) {
     CHECK_COND_ERROR(context, cmp_write_bin(&context->ctx, addr, len));
     return;
   }
 
+  CHECK_COND_ERROR(context, cmp_write_array(&context->ctx, len));
+
   ptrdiff_t offset = 0;
 
   for (int i = 0; i < len; ++i) {
-    offset = offset + SIZE(kind) * i;
+    offset = offset + SIZES[tp] * i;
 
-    pack_addr(context, kind, addr + offset);
+    pack_addr(context, tp, addr + offset);
 
     CHECK_CTX_ERROR(context);
   }
 }
 
-void unpack_array(struct context *context, uint8_t kind, void *addr,
+void unpack_array(struct context *context, uint8_t tp, void *addr,
                   int32_t len) {
-  if (kind == cl_INT8 || kind == cl_UINT8) {
-    uint32_t size = len;
+  uint32_t size = len;
+
+  if (tp == cl_INT8 || tp == cl_UINT8) {
     CHECK_COND_ERROR(context, cmp_read_bin(&context->ctx, addr, &size));
     return;
   }
 
+  CHECK_COND_ERROR(context, cmp_read_array(&context->ctx, &size));
+  CHECK_COND_ERROR(context, size == len);
+
   ptrdiff_t offset = 0;
 
   for (int i = 0; i < len; ++i) {
-    offset = offset + SIZE(kind) * i;
+    offset = offset + SIZES[tp] * i;
 
-    unpack_addr(context, kind, addr + offset);
+    unpack_addr(context, tp, addr + offset);
 
     CHECK_CTX_ERROR(context);
   }
 }
 
-void read_addr(uint8_t kind, const void *addr, struct storage *storage) {
+void pack_string(struct context *context, uint8_t tp, const void *addr,
+                 int32_t cap) {
+  switch (tp) {
+  case cl_INT8:
+  case cl_UINT8: {
+    const int32_t len = strnlen(addr, cap - 1);
+    CHECK_COND_ERROR(context, cmp_write_str(&context->ctx, addr, len));
+    return;
+  }
+  case cl_INT16:
+  case cl_UINT16:
+  case cl_INT32:
+  case cl_UINT32: {
+    // not supported
+  }
+  default:
+    assert(false);
+  }
+}
+
+void unpack_string(struct context *context, uint8_t tp, void *addr,
+                   int32_t cap) {
+  switch (tp) {
+  case cl_INT8:
+  case cl_UINT8: {
+    uint32_t size = cap;
+    CHECK_COND_ERROR(context, cmp_read_str(&context->ctx, addr, &size));
+    return;
+  }
+  case cl_INT16:
+  case cl_UINT16:
+  case cl_INT32:
+  case cl_UINT32: {
+    // not supported
+  }
+  default:
+    assert(false);
+  }
+}
+
+void read_addr(uint8_t tp, const void *addr, struct storage *storage) {
   struct full_storage full_storage;
-  switch (kind) {
+  switch (tp) {
   case cl_BOOL:
     storage->i64 = *(bool *)addr;
     break;
@@ -246,7 +292,7 @@ void read_addr(uint8_t kind, const void *addr, struct storage *storage) {
 
 void visit_children(const struct visitor_ops *visitor, const clColumn *column,
                     struct context *context) {
-  switch (column->kind) {
+  switch (column->tp) {
   case cl_INT8:
   case cl_INT16:
   case cl_INT32:
@@ -279,6 +325,9 @@ void visit_children(const struct visitor_ops *visitor, const clColumn *column,
 
   case cl_FLEXIBLE_ARRAY:
     return visitor->visit_flexible_array(visitor, column, context);
+
+  case cl_STRING:
+    return visitor->visit_string(visitor, column, context);
 
   default:
     assert(false);

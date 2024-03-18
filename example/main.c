@@ -36,6 +36,20 @@ void encode_object() {
   assert(use_item_req.itemID == 1001);
 }
 
+void encode_union() {
+  const char tmp[] = "1234567890abcdefghijklmnopqrstuvwxyz";
+
+  struct stFuzz fuzz = {0};
+  strncpy(fuzz.name, tmp, rand() % sizeof(fuzz.name));
+  fuzz.tag = rand() % 7;
+
+  if (fuzz.tag == 6) {
+    strncpy(fuzz.v.name, tmp, rand() % sizeof(fuzz.v.name));
+  }
+
+  encode_and_decode(stFuzzObject, &fuzz, sizeof(fuzz));
+}
+
 void encode_dyn_array() {
   const uint32_t num = rand() % 10;
 
@@ -65,6 +79,7 @@ int main(int argc, char *args[]) {
   }
   for (int i = 0; i < num; ++i) {
     encode_object();
+    encode_union();
     encode_dyn_array();
   }
   return 0;

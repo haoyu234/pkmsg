@@ -41,14 +41,14 @@ static inline size_t write_buf2(cmp_ctx_t *context, const void *data,
   return count;
 }
 
-static inline void pack_number(const struct visitor_ops *visitor, uint8_t kind,
+static inline void pack_number(const struct visitor_ops *visitor, uint8_t tp,
                                struct encoder *encoder) {
   const ptrdiff_t offset = encoder->base.offset;
-  pack_addr(&encoder->base, kind, encoder->base_addr + offset);
+  pack_addr(&encoder->base, tp, encoder->base_addr + offset);
 }
 
 static inline void visit_array(const struct visitor_ops *visitor, uint32_t num,
-                               uint8_t kind, const clColumn *element,
+                               uint8_t tp, const clColumn *element,
                                struct encoder *encoder) {
   const ptrdiff_t offset = encoder->base.offset;
 
@@ -72,12 +72,12 @@ static inline void visit_array(const struct visitor_ops *visitor, uint32_t num,
     return;
   }
 
-  pack_array(&encoder->base, kind, encoder->base_addr + offset, num);
+  pack_array(&encoder->base, tp, encoder->base_addr + offset, num);
 }
 
 static void visit_number(const struct visitor_ops *visitor,
                          const clColumn *column, struct encoder *encoder) {
-  pack_number(visitor, column->kind, encoder);
+  pack_number(visitor, column->tp, encoder);
 }
 
 static inline void visit_object(const struct visitor_ops *visitor,
@@ -110,7 +110,7 @@ static inline void visit_union(const struct visitor_ops *visitor,
       encoder->base_addr + offset + prev_column->offset - column->offset;
 
   struct storage storage;
-  read_addr(prev_column->kind, addr, &storage);
+  read_addr(prev_column->tp, addr, &storage);
 
   const uint32_t pos = storage.u64;
 
@@ -128,7 +128,7 @@ static inline void visit_fixed_array(const struct visitor_ops *visitor,
                                      const clColumn *column,
                                      struct encoder *encoder) {
   visit_array(visitor, column->via_fixed_array.capacity,
-              column->via_fixed_array.flags, column->via_fixed_array.columns,
+              column->via_fixed_array.tp, column->via_fixed_array.columns,
               encoder);
 }
 
@@ -143,14 +143,23 @@ static inline void visit_flexible_array(const struct visitor_ops *visitor,
       encoder->base_addr + offset + prev_column->offset - column->offset;
 
   struct storage storage;
-  read_addr(prev_column->kind, addr, &storage);
+  read_addr(prev_column->tp, addr, &storage);
 
   const uint32_t num = storage.u64;
 
   CHECK_COND_ERROR(&encoder->base, num <= column->via_flexible_array.capacity);
 
-  visit_array(visitor, num, column->via_flexible_array.flags,
+  visit_array(visitor, num, column->via_flexible_array.tp,
               column->via_flexible_array.columns, encoder);
+}
+
+static inline void visit_string(const struct visitor_ops *visitor,
+                                const clColumn *column,
+                                struct encoder *encoder) {
+  const ptrdiff_t offset = encoder->base.offset;
+
+  pack_string(&encoder->base, column->via_string.tp,
+              encoder->base_addr + offset, column->via_string.capacity);
 }
 
 static struct visitor_ops visitor = {
@@ -159,6 +168,7 @@ static struct visitor_ops visitor = {
     .visit_union = (visitor_handler)visit_union,
     .visit_fixed_array = (visitor_handler)visit_fixed_array,
     .visit_flexible_array = (visitor_handler)visit_flexible_array,
+    .visit_string = (visitor_handler)visit_string,
 };
 
 int32_t pk_encode_cb(const struct clColumn *column, const void *addr,
