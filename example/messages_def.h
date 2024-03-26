@@ -13,6 +13,10 @@ extern const struct clColumn stDropObject[];
 extern const struct clColumn stUseItemRspObject[];
 extern const struct clColumn stFuzzObject[];
 extern const struct clColumn stTestsObject[];
+
+/* plugin output */
+const struct clColumn* get_message_def(int cmd);
+
 #ifdef __cplusplus
 }
 #endif

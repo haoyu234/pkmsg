@@ -1,4 +1,5 @@
 {
     "C_Cpp.default.compileCommands": "/root/repos/pkmsg/builddir/compile_commands.json",
     "C_Cpp.clang_format_sortIncludes": true,
+    "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild",
 }

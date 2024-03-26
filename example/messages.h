@@ -1,5 +1,14 @@
 #include <stdint.h> // IWYU pragma: keep
 
+
+enum
+{
+  USE_ITEM_REQ = 1,
+  USE_ITEM_RSP,
+  FUZZ_STRUCT,
+};
+
+// cmd = USE_ITEM_REQ
 struct stUseItemReq {
   char name[32];
   uint32_t itemID;
@@ -10,6 +19,7 @@ struct stDrop {
   uint32_t itemNum;
 };
 
+// cmd = USE_ITEM_RSP
 struct stUseItemRsp {
   uint32_t code;
   uint32_t num;
@@ -17,6 +27,7 @@ struct stUseItemRsp {
   struct stDrop drops[10];
 };
 
+// cmd = FUZZ_STRUCT
 struct stFuzz {
   char name[32];
   int tag;
